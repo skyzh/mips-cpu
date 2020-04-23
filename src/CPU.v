@@ -70,8 +70,8 @@ module CPU(
     wire [4:0] rf_dest =  is_type_R ? rd : rt;
     wire [31:0] rf_out1;
     wire [31:0] rf_out2;
-    reg [31:0] rf_data;
-    reg rf_write;
+    wire [31:0] rf_data;
+    wire rf_write;
 
     RegisterFile rf(
         .clk (clk),
@@ -90,9 +90,14 @@ module CPU(
     wire [31:0] branch_pc = pc + 4 + imm_offset;
     wire [31:0] next_pc = pc + 4;
     wire is_branch;
-    BranchOp branchOp(.opcode (opcode), .branch_op (is_branch));
-    // MISSING: branch_alu_rt_val
-    wire [31:0] branch_alu_rt_val;
+    wire override_rt;
+    wire [31:0] branch_rt_val;
+    BranchOp branchOp(
+        .opcode (opcode), 
+        .branch_op (is_branch),
+        .override_rt (override_rt),
+        .rt_val (branch_rt_val)
+    );
     
     // MODULE: Memory
     wire [5:0] mapped_op;
@@ -100,12 +105,14 @@ module CPU(
     wire is_memory_load;
     wire is_memory_store;
     wire is_memory;
+    wire [2:0] memory_mode;
     MemoryOp memoryOp(
         .opcode (opcode),
         .store (is_memory_store),
         .load (is_memory_load),
-        .memory_op (is_memory));
-
+        .memory_op (is_memory),
+        .memory_mode (memory_mode));
+    
     // STAGE: Execute
     wire ext_mode;
     ExtMode extMode (.opcode (opcode), .signExt (ext_mode));
@@ -113,7 +120,9 @@ module CPU(
     wire [31:0] alu_imm = ext_mode ? imm_sign_ext : imm_zero_ext;
     wire [31:0] alu_src1 = use_shamt ? shamt_zero_ext : rf_out1;
     wire [31:0] alu_src2 = is_type_R ? rf_out2 : (
-                            is_branch ? branch_alu_rt_val : alu_imm);
+                            is_branch ? 
+                                (override_rt ? branch_rt_val : rf_out2) 
+                            : alu_imm);
     wire [31:0] alu_out;
     wire alu_zero;
     ALU alu (
@@ -123,8 +132,17 @@ module CPU(
             .out (alu_out),
             .zero (alu_zero));
 
-    // MODULE: Branch (missing)
-    wire [31:0] branch_pc;
+    // MODULE: Branch
+    wire take_branch;
+    TakeBranch takeBranch(
+            .opcode (opcode),
+            .rt (rt),
+            .alu_zero (alu_zero),
+            .take_branch (take_branch)
+        );
+    
+    wire [31:0] new_pc = take_branch ? branch_pc : next_pc;
+
     
     // STAGE: Memory
     assign dmem_addr = alu_out;
@@ -139,7 +157,7 @@ module CPU(
     
 
     always @ (negedge clk) begin
-        pc = branch_pc;
+        pc = new_pc;
     end
 
     always @(reset) begin

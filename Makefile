@@ -2,7 +2,7 @@ TESTBENCH = tests
 SRCS	  = src/CPU.v src/Module/SignExt.v src/Module/ZeroExt.v src/Module/ALUOp.v \
 			src/Module/ExtMode.v src/Module/IsShift.v src/Module/ALU.v \
 			src/DataMemory.v src/InstMemory.v src/RegisterFile.v \
-			src/Module/MemoryOp.v src/Module/BranchOp.v
+			src/Module/MemoryOp.v src/Module/BranchOp.v src/Module/TakeBranch.v
 RESULT    = result
 V_FLAG    = -g2005-sv
 
@@ -34,4 +34,4 @@ scansion: simulate
 	open /Applications/Scansion.app $(RESULT).vcd
 
 clean:
-	rm -rf $(TESTBENCH)/*.vvp $(RESULT).vcd $(TESTBENCH)/*_log.txt
+	rm -rf $(TESTBENCH).vvp $(RESULT).vcd $(TESTBENCH)_log.txt

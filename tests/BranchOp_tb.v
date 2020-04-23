@@ -3,7 +3,9 @@
 module BranchOp_tb;
     reg [5:0] opcode;
     wire [5:0] is_branch;
-    BranchOp branchOp(opcode, is_branch);
+    wire override_rt;
+    wire [31:0] rt_val;
+    BranchOp branchOp(opcode, is_branch, override_rt, rt_val);
 
     initial begin
         $dumpfile("result.vcd");

@@ -5,7 +5,8 @@ module MemoryOp_tb;
     wire store;
     wire load;
     wire memory_op;
-    MemoryOp memoryOp(opcode, store, load, memory_op);
+    wire [2:0] memory_mode;
+    MemoryOp memoryOp(opcode, store, load, memory_op, memory_mode);
 
     initial begin
         $dumpfile("result.vcd");
