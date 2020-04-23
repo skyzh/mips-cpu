@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 
+// This module checks if an operation requires zero extenstion
 module ExtMode(
     input [5:0] opcode,
     output reg signExt);

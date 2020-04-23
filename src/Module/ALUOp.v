@@ -1,5 +1,6 @@
 `timescale 1ns / 1ps
 
+// This module maps opcoode to ALUop
 module ALUOp(
     input [5:0] opcode,
     output reg [5:0] ALUopcode);
