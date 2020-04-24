@@ -152,9 +152,9 @@ module CPU(
     assign rf_data = is_memory_load ? dmem_out : alu_out;
 
     always @ (negedge clk) begin
-        if (reset)
-            pc <= 0;
-        else 
-            pc <= new_pc;
+        pc <= reset ? 0 : new_pc;
+    end
+    always @ (negedge reset) begin
+        pc <= 0;
     end
 endmodule

@@ -5,6 +5,6 @@ module ZeroExt(
     output reg [31:0] extended);
 
     always @ (unextended) begin
-        extended = {{16{'0}}, unextended};
+        extended = {16'b0, unextended};
     end
 endmodule

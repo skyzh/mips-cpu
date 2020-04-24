@@ -15,7 +15,7 @@ module RegisterFile(
 
     integer i;
 
-    initial begin
+    always @ (negedge reset) begin
         for (i = 0; i < 32; i = i + 1) begin
             regs[i] = 0;
         end

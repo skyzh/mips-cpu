@@ -27,7 +27,7 @@ module ALU(
             // andi
             6'h0C: out = op1 & op2;
             // nor
-            6'h27: out = op1 ~| op2;
+            6'h27: out = ~(op1 | op2);
             // or
             6'h25: out = op1 | op2;
             // ori
