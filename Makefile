@@ -34,4 +34,4 @@ scansion: simulate
 	open /Applications/Scansion.app $(RESULT).vcd
 
 clean:
-	rm -rf $(TESTBENCH).vvp $(RESULT).vcd $(TESTBENCH)_log.txt
+	rm -rf $(TESTBENCH).vvp $(RESULT).vcd $(TESTBENCH)_log.txt $(TESTBENCH)/*_log.txt  $(TESTBENCH)/*.vvp

@@ -12,6 +12,7 @@ module CPU(
     wire [31:0] dmem_in;
     wire dmem_write;
     wire dmem_read;
+    wire [2:0] dmem_mode;
     wire [31:0] dmem_out;
 
     DataMemory dmem(
@@ -20,24 +21,18 @@ module CPU(
         .writeData (dmem_in),
         .memWrite (dmem_write),
         .memRead (dmem_read),
+        .mode (dmem_mode),
         .reset (reset),
         .readData (dmem_out)
     );
 
     // Instruction Memory
     wire [31:0] imem_addr;
-    reg [31:0] imem_in;
-    reg imem_write;
-    reg imem_read;
     wire [31:0] imem_out;
 
     InstMemory imem(
         .clk (clk),
         .address (imem_addr),
-        .writeData (imem_in),
-        .memWrite (imem_write),
-        .memRead (imem_read),
-        .reset (reset),
         .readData (imem_out)
     );
 
@@ -63,10 +58,12 @@ module CPU(
     IsShift isShift(.funct (funct), .shift (is_shift));
     wire is_type_R = (opcode == 0);
     wire use_shamt = is_shift && is_type_R;
+    wire is_branch;
+    wire is_memory;
 
     // MODULE: Register File
     wire [4:0] rf_src1 = rs;
-    wire [4:0] rf_src2 = is_type_R ? rt : 0;
+    wire [4:0] rf_src2 = is_type_R || is_branch || is_memory ? rt : 0;
     wire [4:0] rf_dest =  is_type_R ? rd : rt;
     wire [31:0] rf_out1;
     wire [31:0] rf_out2;
@@ -89,7 +86,6 @@ module CPU(
     wire [31:0] imm_offset = imm_sign_ext <<< 2;
     wire [31:0] branch_pc = pc + 4 + imm_offset;
     wire [31:0] next_pc = pc + 4;
-    wire is_branch;
     wire override_rt;
     wire [31:0] branch_rt_val;
     BranchOp branchOp(
@@ -104,7 +100,6 @@ module CPU(
     ALUOp aluOp(.opcode (opcode), .ALUopcode (mapped_op));
     wire is_memory_load;
     wire is_memory_store;
-    wire is_memory;
     wire [2:0] memory_mode;
     MemoryOp memoryOp(
         .opcode (opcode),
@@ -112,6 +107,7 @@ module CPU(
         .load (is_memory_load),
         .memory_op (is_memory),
         .memory_mode (memory_mode));
+    assign dmem_mode = memory_mode;
     
     // STAGE: Execute
     wire ext_mode;
@@ -154,13 +150,11 @@ module CPU(
     // STAGE: Write Back
     assign rf_write = !is_branch && !dmem_write;
     assign rf_data = is_memory_load ? dmem_out : alu_out;
-    
 
     always @ (negedge clk) begin
-        pc = new_pc;
-    end
-
-    always @(reset) begin
-        pc = 0;
+        if (reset)
+            pc <= 0;
+        else 
+            pc <= new_pc;
     end
 endmodule

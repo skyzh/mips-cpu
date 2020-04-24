@@ -3,23 +3,20 @@
 module InstMemory(
     input wire clk,
     input [31:0] address,
-    input [31:0] writeData,
-    input memWrite,
-    input memRead,
-    input reset,
-    output reg [31:0] readData);
+    output [31:0] readData);
 
-    reg [31:0] memFile [0:63];
-    
-    always @ (negedge clk) begin
-        if (memWrite)
-            memFile[address] <= writeData;
+    parameter mem_size = 65536;
+    parameter mem_file = "mips_hex/6-mem.mem";
+
+    reg [31:0] memFile [0:mem_size];
+
+    integer i;
+    initial begin
+        for(i = 0; i < mem_size; i = i + 1) begin
+			memFile[i] = 0;
+		end
+        $readmemh(mem_file, memFile);
     end
 
-    always @ (*) begin
-        if (reset)
-            readData = 0;
-        else if (memRead)
-            readData = memFile[address];
-    end
+    assign readData = memFile[address >>> 2];
 endmodule

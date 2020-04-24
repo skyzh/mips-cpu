@@ -27,10 +27,10 @@ module ALU(
             // andi
             6'h0C: out = op1 & op2;
             // nor
-            6'h27: out = ~(op1 | op2);
+            6'h27: out = op1 ~| op2;
             // or
             6'h25: out = op1 | op2;
-            // or
+            // ori
             6'h0D: out = op1 | op2;
             // xor
             6'h26: out = op1 ^ op2;
