@@ -58,13 +58,15 @@ module CPU(
     IsShift isShift(.funct (funct), .shift (is_shift));
     wire is_type_R = (opcode == 0);
     wire use_shamt = is_shift && is_type_R;
+    wire [31:0] jump_target = {4'b00, inst[25:0], 2'b00} | (pc & 32'hf0000000);
     wire is_branch;
     wire is_memory;
 
     // MODULE: Register File
     wire [4:0] rf_src1 = rs;
     wire [4:0] rf_src2 = is_type_R || is_branch || is_memory ? rt : 0;
-    wire [4:0] rf_dest =  is_type_R ? rd : rt;
+    wire [4:0] rf_dest =  is_type_R ? rd : (
+                            opcode == 3 ? 31 : rt);
     wire [31:0] rf_out1;
     wire [31:0] rf_out2;
     wire [31:0] rf_data;
@@ -137,7 +139,9 @@ module CPU(
             .take_branch (take_branch)
         );
     
-    wire [31:0] new_pc = take_branch ? branch_pc : next_pc;
+    wire [31:0] new_pc = take_branch ? branch_pc : (
+                            (opcode == 2 || opcode == 3) ? jump_target : (
+                                (opcode == 0 && funct == 8) ? rf_out1 : next_pc));
 
     
     // STAGE: Memory
@@ -148,8 +152,9 @@ module CPU(
     assign dmem_read = is_memory_load;
 
     // STAGE: Write Back
-    assign rf_write = !is_branch && !dmem_write;
-    assign rf_data = is_memory_load ? dmem_out : alu_out;
+    assign rf_write = !is_branch && !dmem_write && opcode != 2;
+    assign rf_data = is_memory_load ? dmem_out : (
+        opcode == 3 ? pc + 4 : alu_out);
 
     always @ (negedge clk) begin
         pc <= reset ? 0 : new_pc;
