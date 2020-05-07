@@ -2,6 +2,7 @@
 
 `define WORD 31:0
 `define REG 4:0
+`define OP 5:0
 
 module CPU(
     input wire clk,
@@ -52,10 +53,10 @@ module CPU(
     // --- STAGE ---
     //   InstDecode
     // --- STAGE REGS ---
-    reg [5:0] stage_id_alu_op;
+    reg [`OP] stage_id_alu_op;
     reg [`WORD] stage_id_alu_src1;
     reg [`WORD] stage_id_alu_src2;
-    reg [5:0] stage_id_opcode;
+    reg [`OP] stage_id_opcode;
     reg [`WORD] stage_id_pc;
     reg stage_id_alu_branch_mask;
     reg [`WORD] stage_id_branch_pc;
@@ -78,10 +79,10 @@ module CPU(
     wire [`REG] rf_src2;
     wire [`WORD] rf_out1;
     wire [`WORD] rf_out2;
-    wire [5:0] out_id_alu_op;
+    wire [`OP] out_id_alu_op;
     wire [`WORD] out_id_alu_src1;
     wire [`WORD] out_id_alu_src2;
-    wire [5:0] out_id_opcode;
+    wire [`OP] out_id_opcode;
     wire [`WORD] out_id_pc;
     wire out_id_alu_branch_mask;
     wire [`WORD] out_id_branch_pc;

@@ -4,10 +4,10 @@ module InstDecode(
     input [`WORD] inst,
     input [`WORD] if_pc,
     input if_branch_taken,
-    output [5:0] alu_op,
+    output [`OP] alu_op,
     output [`WORD] alu_src1,
     output [`WORD] alu_src2,
-    output [5:0] opcode,
+    output [`OP] opcode,
     output [`WORD] id_pc,
     output alu_branch_mask,
     output [`WORD] branch_pc,
@@ -37,8 +37,8 @@ module InstDecode(
     wire [`REG] rt = inst[20:16];
     wire [`REG] rd = inst[15:11];
     wire [`REG] shamt = inst[10:6];
-    wire [5:0] funct = inst[5:0];
-    wire [15:0] imm = inst[15:0];
+    wire [`OP] funct = inst[`OP];
+    wire [1`OP] imm = inst[1`OP];
     wire [`WORD] imm_sign_ext;
     wire [`WORD] imm_zero_ext;
     wire [`WORD] shamt_zero_ext = {{27'b0}, shamt};
@@ -48,7 +48,7 @@ module InstDecode(
     IsShift isShift(.funct (funct), .shift (is_shift));
     wire is_type_R = (opcode == 0);
     wire use_shamt = is_shift && is_type_R;
-    wire [`WORD] jump_target = {4'b00, inst[25:0], 2'b00} | (pc & 32'hf0000000);
+    wire [`WORD] jump_target = {4'b00, inst[2`OP], 2'b00} | (pc & 32'hf0000000);
     wire is_branch;
     wire is_memory;
 
@@ -92,7 +92,7 @@ module InstDecode(
 
     
     // MODULE: Memory
-    wire [5:0] mapped_op;
+    wire [`OP] mapped_op;
     ALUOp aluOp(
         .opcode (opcode), 
         .ALUopcode (mapped_op));
