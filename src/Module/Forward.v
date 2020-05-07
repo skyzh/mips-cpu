@@ -18,14 +18,22 @@ module Forward(
     output reg stall
 );
     wire ex_is_arithmetic_op;
-    wire ex_is_link_op;
+    wire ex_is_link_op = ex_opcode == 3;
     wire ex_is_memory_load;
     wire mem_is_arithmetic_op;
-    wire mem_is_link_op;
+    wire mem_is_link_op = mem_opcode == 3;
     wire mem_is_memory_load;
     wire wb_is_arithmetic_op;
-    wire wb_is_link_op;
+    wire wb_is_link_op = wb_opcode == 3;
     wire wb_is_memory_load;
+
+    ALUOp ex_aluop(.opcode (ex_opcode), .arithmetic_op (ex_is_arithmetic_op));
+    ALUOp mem_aluop(.opcode (mem_opcode), .arithmetic_op (mem_is_arithmetic_op));
+    ALUOp wb_aluop(.opcode (wb_opcode), .arithmetic_op (wb_is_arithmetic_op));
+    
+    MemoryOp ex_memop(.opcode (ex_opcode), .load (ex_is_memory_load));
+    MemoryOp mem_memop(.opcode (mem_opcode), .load (mem_is_memory_load));
+    MemoryOp wb_memop(.opcode (wb_opcode), .load (wb_is_memory_load));
     
     always @(*) begin
         data = 0;
@@ -58,8 +66,6 @@ module Forward(
                 data = wb_val;
                 stall = 0;
                 depends = 1;
-            end
         end
-            
     end
 endmodule

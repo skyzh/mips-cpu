@@ -16,6 +16,7 @@ module InstDecode(
     output [`WORD] mem_data,
     output id_branch_taken,
     output force_jump,
+    output stall,
     // MODULE: Forward
     input forward_depends_1,
     input forward_depends_2,
@@ -86,7 +87,7 @@ module InstDecode(
     assign forward_op2 = rf_src2;
     wire alu_use_rf_out_1;
     wire alu_use_rf_out_2;
-    wire stall = (alu_use_rf_out_1 && forward_stalls_1) || 
+    assign stall = (alu_use_rf_out_1 && forward_stalls_1) || 
                     (alu_use_rf_out_2 && forward_stalls_2) ||
                     (is_memory_store && forward_stalls_2);
 

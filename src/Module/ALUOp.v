@@ -3,7 +3,8 @@
 // This module maps opcoode to ALUop
 module ALUOp(
     input [5:0] opcode,
-    output reg [5:0] ALUopcode);
+    output reg [5:0] ALUopcode,
+    output reg arithmetic_op);
 
     always @ (opcode) begin
         case (opcode)
@@ -23,6 +24,17 @@ module ALUOp(
             6'h2B: ALUopcode = 6'h20;
             // other instructions stay the same
             default: ALUopcode = opcode;
+        endcase
+        case (opcode)
+            6'h00: arithmetic_op = 1;
+            6'h08: arithmetic_op = 1;
+            6'h09: arithmetic_op = 1;
+            6'h0C: arithmetic_op = 1;
+            6'h0D: arithmetic_op = 1;
+            6'h0E: arithmetic_op = 1;
+            6'h0A: arithmetic_op = 1;
+            6'h0B: arithmetic_op = 1;
+            default: arithmetic_op = 0;
         endcase
     end
 endmodule

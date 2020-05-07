@@ -92,8 +92,47 @@ module CPU(
     wire out_id_branch_taken;
     wire out_id_force_jump;
 
-    Forward forward1();
-    Forward forward2();
+    // --- Execute STAGE INTERMEDIATES ---
+    wire [`WORD] out_ex_alu_out;
+    wire [`OP] out_ex_opcode;
+    wire [`WORD] out_ex_pc;
+    wire [`REG] out_ex_rf_dest;
+    wire [`WORD] out_ex_mem_data;
+
+    // Forwarding
+    Forward forward1(
+        .ex_opcode (out_ex_opcode),
+        .ex_dest (out_ex_rf_dest),
+        .ex_val (out_ex_alu_out),
+        .mem_opcode (mem_opcode),
+        .mem_dest (mem_dest),
+        .mem_alu_val (mem_alu_val),
+        .mem_val (mem_val),
+        .wb_opcode (wb_opcode),
+        .wb_dest (wb_dest),
+        .wb_val (wb_val),
+        .src (out_id_forward_op1),
+        .data (forward_result_1),
+        .depends (forward_depends_1),
+        .stall (forward_stalls_1)
+    );
+
+    Forward forward2(
+        .ex_opcode (out_ex_opcode),
+        .ex_dest (out_ex_rf_dest),
+        .ex_val (out_ex_alu_out),
+        .mem_opcode (mem_opcode),
+        .mem_dest (mem_dest),
+        .mem_alu_val (mem_alu_val),
+        .mem_val (mem_val),
+        .wb_opcode (wb_opcode),
+        .wb_dest (wb_dest),
+        .wb_val (wb_val),
+        .src (out_id_forward_op2),
+        .data (forward_result_2),
+        .depends (forward_depends_2),
+        .stall (forward_stalls_2)
+    );
 
     wire [`REG] rf_dest;
     wire [`WORD] rf_data;
@@ -127,6 +166,7 @@ module CPU(
         .mem_data (out_id_mem_data),
         .id_branch_taken (out_id_branch_taken),
         .force_jump (out_id_force_jump),
+        .stall (out_id_stall),
         // MODULE: Forward
         .forward_op1 (out_id_forward_op1),
         .forward_op2 (out_id_forward_op2),
@@ -142,6 +182,78 @@ module CPU(
         .rf_out1_prev (rf_out1),
         .rf_out2_prev (rf_out2)
     );
+
+    // --- CLOCK ---
+    always @ (negedge clk) begin
+        if (!correct_branch_prediction || out_id_stall) begin
+            // Bubble
+            stage_id_alu_op <= 0;
+            stage_id_alu_src1 <= 0;
+            stage_id_alu_src2 <= 0;
+            stage_id_opcode <= 0;
+            stage_id_pc <= 0;
+            stage_id_alu_branch_mask <= 0;
+            stage_id_branch_pc <= 0;
+            stage_id_next_pc <= 0;
+            stage_id_rf_dest <= 0;
+            stage_id_mem_data <= 0;
+            stage_id_branch_taken <= 0;
+            stage_id_force_jump <= 0;
+        end else begin
+            stage_id_alu_op <= out_id_alu_op;
+            stage_id_alu_src1 <= out_id_alu_src1;
+            stage_id_alu_src2 <= out_id_alu_src2;
+            stage_id_opcode <= out_id_opcode;
+            stage_id_pc <= out_id_pc;
+            stage_id_alu_branch_mask <= out_id_alu_branch_mask;
+            stage_id_branch_pc <= out_id_branch_pc;
+            stage_id_next_pc <= out_id_next_pc;
+            stage_id_rf_dest <= out_id_rf_dest;
+            stage_id_mem_data <= out_id_mem_data;
+            stage_id_branch_taken <= out_id_branch_taken;
+            stage_id_force_jump <= out_id_force_jump;
+        end
+    end
+
+    // --- STAGE ---
+    //   Execute
+    // --- STAGE REGS ---
+    reg [`WORD] stage_ex_alu_out;
+    reg [`OP] stage_ex_opcode;
+    reg [`WORD] stage_ex_pc;
+    reg [`REG] stage_ex_rf_dest;
+    reg [`WORD] stage_ex_mem_data;
+
+    Execute execute(
+        .alu_op (stage_id_opcode),
+        .alu_src1 (stage_id_alu_src1),
+        .alu_src2 (stage_id_alu_src2),
+        .id_opcode (stage_id_opcode),
+        .id_pc (stage_id_pc),
+        .alu_branch_mask (stage_id_alu_branch_mask),
+        .branch_pc (stage_id_branch_pc),
+        .next_pc (stage_id_next_pc),
+        .id_rf_dest (stage_id_rf_dest),
+        .id_mem_data (stage_id_mem_data),
+        .id_branch_taken (stage_id_branch_taken),
+        .force_jump (stage_id_force_jump),
+        .alu_out (out_ex_alu_out),
+        .ex_opcode (out_ex_opcode),
+        .ex_pc (out_ex_pc),
+        .ex_rf_dest (out_ex_rf_dest),
+        .ex_mem_data (out_ex_mem_data),
+        .correct_branch_prediction (correct_branch_prediction),
+        .branch_jump_target (branch_jump_target)
+    );
+
+    // --- CLOCK ---
+    always @ (negedge clk) begin
+        stage_ex_alu_out <= out_ex_alu_out;
+        stage_ex_opcode <= out_ex_opcode;
+        stage_ex_pc <= out_ex_pc;
+        stage_ex_rf_dest <= out_ex_rf_dest;
+        stage_ex_mem_data <= out_ex_mem_data;
+    end
 
     // Data Memory
     wire [`WORD] dmem_addr;
@@ -162,48 +274,6 @@ module CPU(
         .readData (dmem_out)
     );
 
-    // Instruction Memory
-    wire [`WORD] imem_addr;
-    wire [`WORD] imem_out;
-
-    InstMemory imem(
-        .address (imem_addr),
-        .readData (imem_out)
-    );
-
-    // STAGE: Instruction Fetch
-    assign imem_addr = pc;
-    
-    wire [`WORD] inst = imem_out;
-    
-    // STAGE: Decode
-    // STAGE: Execute
-    
-    
-
-    wire [`WORD] alu_out;
-    wire alu_zero;
-    ALU alu (
-            .ALUopcode (alu_op), 
-            .op1 (alu_src1),
-            .op2 (alu_src2),
-            .out (alu_out),
-            .zero (alu_zero));
-
-    // MODULE: Branch
-    wire take_branch;
-    TakeBranch takeBranch(
-            .opcode (opcode),
-            .rt (rt),
-            .alu_zero (alu_zero),
-            .take_branch (take_branch)
-        );
-    
-    wire [`WORD] new_pc = take_branch ? branch_pc : (
-                            (opcode == 2 || opcode == 3) ? jump_target : (
-                                (opcode == 0 && funct == 8) ? rf_out1 : next_pc));
-
-    
     // STAGE: Memory
     assign dmem_addr = alu_out;
     assign dmem_in = rf_out2;
@@ -215,11 +285,28 @@ module CPU(
     assign rf_write = !is_branch && !dmem_write && opcode != 2;
     assign rf_data = is_memory_load ? dmem_out : (
         opcode == 3 ? pc + 4 : alu_out);
-
-    always @ (negedge clk) begin
-        pc <= reset ? 0 : new_pc;
-    end
+    
     always @ (negedge reset) begin
         pc <= 0;
+        stage_if_inst <= 0;
+        stage_if_pc <= 0;
+        stage_if_branch_taken <= 0;
+        stage_id_alu_op <= 0;
+        stage_id_alu_src1 <= 0;
+        stage_id_alu_src2 <= 0;
+        stage_id_opcode <= 0;
+        stage_id_pc <= 0;
+        stage_id_alu_branch_mask <= 0;
+        stage_id_branch_pc <= 0;
+        stage_id_next_pc <= 0;
+        stage_id_rf_dest <= 0;
+        stage_id_mem_data <= 0;
+        stage_id_branch_taken <= 0;
+        stage_id_force_jump <= 0;
+        stage_ex_alu_out <= 0;
+        stage_ex_opcode <= 0;
+        stage_ex_pc <= 0;
+        stage_ex_rf_dest <= 0;
+        stage_ex_mem_data <= 0;
     end
 endmodule
