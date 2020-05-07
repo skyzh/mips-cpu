@@ -1,19 +1,154 @@
 `timescale 1ns / 1ps
 
+`define WORD 31:0
+`define REG 4:0
+
 module CPU(
     input wire clk,
     input reset);
 
     // PC Register
-    reg [31:0] pc;
+    reg [`WORD] pc;
+
+    // Branch Prediction Result
+    wire correct_branch_prediction;
+    wire [`WORD] branch_jump_target;
+
+    // --- STAGE ---
+    //   InstFetch
+
+    // --- INPUT ---
+    wire [`WORD] if_pc = !correct_branch_prediction ? branch_jump_target : pc;
+
+    // --- STAGE REGS ---
+    reg [`WORD] stage_if_inst;
+    reg [`WORD] stage_if_pc;
+    reg stage_if_branch_taken;
+
+    // --- OUTPUT ---
+    wire [`WORD] out_if_next_pc;
+    wire [`WORD] out_if_inst;
+    wire [`WORD] out_if_pc;
+
+    InstFetch instFetch(
+        .if_pc (if_pc),
+        .inst (out_if_inst),
+        .pc (out_if_pc),
+        .next_pc (out_if_next_pc)
+    );
+
+    wire out_id_stall;
+    wire [`WORD] if_next_pc = out_id_stall ? if_pc : out_if_next_pc;
+
+    // --- CLOCK ---
+    always @ (negedge clk) begin
+        if (!out_id_stall) begin
+            stage_if_inst <= out_if_inst;
+            stage_if_pc <= out_if_pc;
+            stage_if_branch_taken <= 0; // branch prediction: always not taken
+        end
+    end
+
+    // --- STAGE ---
+    //   InstDecode
+    // --- STAGE REGS ---
+    reg [5:0] stage_id_alu_op;
+    reg [`WORD] stage_id_alu_src1;
+    reg [`WORD] stage_id_alu_src2;
+    reg [5:0] stage_id_opcode;
+    reg [`WORD] stage_id_pc;
+    reg stage_id_alu_branch_mask;
+    reg [`WORD] stage_id_branch_pc;
+    reg [`WORD] stage_id_next_pc;
+    reg [`REG] stage_id_rf_dest;
+    reg [`WORD] stage_id_mem_data;
+    reg stage_id_branch_taken;
+    reg stage_id_force_jump;
+
+    // --- STAGE INTERMEDIATES ---
+    wire [`REG] out_id_forward_op1;
+    wire [`REG] out_id_forward_op2;
+    wire forward_depends_1;
+    wire forward_depends_2;
+    wire forward_stalls_1;
+    wire forward_stalls_2;
+    wire [`WORD] forward_result_1;
+    wire [`WORD] forward_result_2;
+    wire [`REG] rf_src1;
+    wire [`REG] rf_src2;
+    wire [`WORD] rf_out1;
+    wire [`WORD] rf_out2;
+    wire [5:0] out_id_alu_op;
+    wire [`WORD] out_id_alu_src1;
+    wire [`WORD] out_id_alu_src2;
+    wire [5:0] out_id_opcode;
+    wire [`WORD] out_id_pc;
+    wire out_id_alu_branch_mask;
+    wire [`WORD] out_id_branch_pc;
+    wire [`WORD] out_id_next_pc;
+    wire [`REG] out_id_rf_dest;
+    wire [`WORD] out_id_mem_data;
+    wire out_id_branch_taken;
+    wire out_id_force_jump;
+
+    Forward forward1();
+    Forward forward2();
+
+    wire [`REG] rf_dest;
+    wire [`WORD] rf_data;
+    wire rf_write;
+
+    RegisterFile rf(
+        .clk (clk),
+        .src1 (rf_src1),
+        .src2 (rf_src2),
+        .dest (rf_dest),
+        .data (rf_data),
+        .write (rf_write),
+        .out1 (rf_out1),
+        .out2 (rf_out2),
+        .reset (reset)
+    );
+
+    InstDecode instDecode(
+        .if_pc (stage_if_pc),
+        .inst (stage_if_inst),
+        .if_branch_taken (stage_if_branch_taken),
+        .alu_op (out_id_alu_op),
+        .alu_src1 (out_id_alu_src1),
+        .alu_src2 (out_id_alu_src2),
+        .opcode (out_id_opcode),
+        .id_pc (out_id_pc),
+        .alu_branch_mask (out_id_alu_branch_mask),
+        .branch_pc (out_id_branch_pc),
+        .next_pc (out_id_next_pc),
+        .rf_dest (out_id_rf_dest),
+        .mem_data (out_id_mem_data),
+        .id_branch_taken (out_id_branch_taken),
+        .force_jump (out_id_force_jump),
+        // MODULE: Forward
+        .forward_op1 (out_id_forward_op1),
+        .forward_op2 (out_id_forward_op2),
+        .forward_depends_1 (forward_depends_1),
+        .forward_depends_2 (forward_depends_2),
+        .forward_stalls_1 (forward_stalls_1),
+        .forward_stalls_2 (forward_stalls_2),
+        .forward_result_1 (forward_result_1),
+        .forward_result_2 (forward_result_2),
+        // MODULE: RegisterFile
+        .rf_src1 (rf_src1),
+        .rf_src2 (rf_src2),
+        .rf_out1_prev (rf_out1),
+        .rf_out2_prev (rf_out2)
+    );
 
     // Data Memory
-    wire [31:0] dmem_addr;
-    wire [31:0] dmem_in;
+    wire [`WORD] dmem_addr;
+    wire [`WORD] dmem_in;
     wire dmem_write;
     wire dmem_read;
     wire [2:0] dmem_mode;
-    wire [31:0] dmem_out;
+    wire [`WORD] dmem_out;
 
     DataMemory dmem(
         .clk (clk),
@@ -27,11 +162,10 @@ module CPU(
     );
 
     // Instruction Memory
-    wire [31:0] imem_addr;
-    wire [31:0] imem_out;
+    wire [`WORD] imem_addr;
+    wire [`WORD] imem_out;
 
     InstMemory imem(
-        .clk (clk),
         .address (imem_addr),
         .readData (imem_out)
     );
@@ -39,89 +173,14 @@ module CPU(
     // STAGE: Instruction Fetch
     assign imem_addr = pc;
     
-    wire [31:0] inst = imem_out;
+    wire [`WORD] inst = imem_out;
     
     // STAGE: Decode
-    wire [5:0] opcode = inst[31:26];
-    wire [4:0] rs = inst[25:21];
-    wire [4:0] rt = inst[20:16];
-    wire [4:0] rd = inst[15:11];
-    wire [4:0] shamt = inst[10:6];
-    wire [5:0] funct = inst[5:0];
-    wire [15:0] imm = inst[15:0];
-    wire [31:0] imm_sign_ext;
-    wire [31:0] imm_zero_ext;
-    wire [31:0] shamt_zero_ext = {{27'b0}, shamt};
-    SignExt signExt(.unextended (imm), .extended (imm_sign_ext));
-    ZeroExt zeroExt(.unextended (imm), .extended (imm_zero_ext));
-    wire is_shift;
-    IsShift isShift(.funct (funct), .shift (is_shift));
-    wire is_type_R = (opcode == 0);
-    wire use_shamt = is_shift && is_type_R;
-    wire [31:0] jump_target = {4'b00, inst[25:0], 2'b00} | (pc & 32'hf0000000);
-    wire is_branch;
-    wire is_memory;
-
-    // MODULE: Register File
-    wire [4:0] rf_src1 = rs;
-    wire [4:0] rf_src2 = is_type_R || is_branch || is_memory ? rt : 0;
-    wire [4:0] rf_dest =  is_type_R ? rd : (
-                            opcode == 3 ? 31 : rt);
-    wire [31:0] rf_out1;
-    wire [31:0] rf_out2;
-    wire [31:0] rf_data;
-    wire rf_write;
-
-    RegisterFile rf(
-        .clk (clk),
-        .src1 (rf_src1),
-        .src2 (rf_src2),
-        .dest (rf_dest),
-        .data (rf_data),
-        .write (rf_write),
-        .out1 (rf_out1),
-        .out2 (rf_out2),
-        .reset (reset)
-        );
-
-    // MODULE: Branch
-    wire [31:0] imm_offset = imm_sign_ext <<< 2;
-    wire [31:0] branch_pc = pc + 4 + imm_offset;
-    wire [31:0] next_pc = pc + 4;
-    wire override_rt;
-    wire [31:0] branch_rt_val;
-    BranchOp branchOp(
-        .opcode (opcode), 
-        .branch_op (is_branch),
-        .override_rt (override_rt),
-        .rt_val (branch_rt_val)
-    );
-    
-    // MODULE: Memory
-    wire [5:0] mapped_op;
-    ALUOp aluOp(.opcode (opcode), .ALUopcode (mapped_op));
-    wire is_memory_load;
-    wire is_memory_store;
-    wire [2:0] memory_mode;
-    MemoryOp memoryOp(
-        .opcode (opcode),
-        .store (is_memory_store),
-        .load (is_memory_load),
-        .memory_op (is_memory),
-        .memory_mode (memory_mode));
-    assign dmem_mode = memory_mode;
-    
     // STAGE: Execute
-    wire ext_mode;
-    ExtMode extMode (.opcode (opcode), .signExt (ext_mode));
-    wire [5:0] alu_op = is_type_R ? funct : mapped_op;
-    wire [31:0] alu_imm = ext_mode ? imm_sign_ext : imm_zero_ext;
-    wire [31:0] alu_src1 = use_shamt ? shamt_zero_ext : rf_out1;
-    wire [31:0] alu_src2 = is_type_R ? rf_out2 : (
-                            is_branch ? 
-                                (override_rt ? branch_rt_val : rf_out2) 
-                            : alu_imm);
-    wire [31:0] alu_out;
+    
+    
+
+    wire [`WORD] alu_out;
     wire alu_zero;
     ALU alu (
             .ALUopcode (alu_op), 
@@ -139,7 +198,7 @@ module CPU(
             .take_branch (take_branch)
         );
     
-    wire [31:0] new_pc = take_branch ? branch_pc : (
+    wire [`WORD] new_pc = take_branch ? branch_pc : (
                             (opcode == 2 || opcode == 3) ? jump_target : (
                                 (opcode == 0 && funct == 8) ? rf_out1 : next_pc));
 
