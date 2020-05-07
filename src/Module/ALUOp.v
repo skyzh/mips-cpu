@@ -22,6 +22,8 @@ module ALUOp(
             6'h23: ALUopcode = 6'h20;
             6'h28: ALUopcode = 6'h20;
             6'h2B: ALUopcode = 6'h20;
+            // jal = add
+            6'h03: ALUopcode = 6'h20;
             // other instructions stay the same
             default: ALUopcode = opcode;
         endcase
@@ -32,6 +34,7 @@ module ALUOp(
             6'h0C: arithmetic_op = 1;
             6'h0D: arithmetic_op = 1;
             6'h0E: arithmetic_op = 1;
+            6'h0F: arithmetic_op = 1;
             6'h0A: arithmetic_op = 1;
             6'h0B: arithmetic_op = 1;
             default: arithmetic_op = 0;

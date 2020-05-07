@@ -27,6 +27,7 @@ module Forward(
     wire wb_is_link_op = wb_opcode == 3;
     wire wb_is_memory_load;
 
+    /* verilator lint_off PINMISSING */
     ALUOp ex_aluop(.opcode (ex_opcode), .arithmetic_op (ex_is_arithmetic_op));
     ALUOp mem_aluop(.opcode (mem_opcode), .arithmetic_op (mem_is_arithmetic_op));
     ALUOp wb_aluop(.opcode (wb_opcode), .arithmetic_op (wb_is_arithmetic_op));
@@ -34,6 +35,7 @@ module Forward(
     MemoryOp ex_memop(.opcode (ex_opcode), .load (ex_is_memory_load));
     MemoryOp mem_memop(.opcode (mem_opcode), .load (mem_is_memory_load));
     MemoryOp wb_memop(.opcode (wb_opcode), .load (wb_is_memory_load));
+    /* verilator lint_on PINMISSING */
     
     always @(*) begin
         data = 0;
@@ -43,29 +45,26 @@ module Forward(
             data = 0;
             depends = 0;
             stall = 0;
-        end else if (ex_dest == src) begin
-            if (ex_is_arithmetic_op || ex_is_link_op) begin
-                data = ex_val;
-                stall = 0;
-                depends = 1;
-            end
-            if (ex_is_memory_load) begin
-                data = 0;
-                stall = 1;
-                depends = 1;
-            end
-        end else if (mem_dest == src) begin
-            if (mem_is_arithmetic_op || mem_is_link_op) data = mem_alu_val;
-            if (mem_is_memory_load) data = mem_val;
-            if (mem_is_arithmetic_op || mem_is_memory_load || mem_is_link_op) begin
-                stall = 0;
-                depends = 1;
-            end
-        end else if (wb_dest == src) begin
-            if (wb_is_arithmetic_op || wb_is_memory_load || wb_is_link_op)
-                data = wb_val;
-                stall = 0;
-                depends = 1;
+        end else if (ex_dest == src && (ex_is_arithmetic_op || ex_is_link_op)) begin
+            data = ex_val;
+            stall = 0;
+            depends = 1;
+        end else if (ex_dest == src && ex_is_memory_load) begin
+            data = 0;
+            stall = 1;
+            depends = 1;
+        end else if (mem_dest == src && (mem_is_arithmetic_op || mem_is_link_op)) begin
+            data = mem_alu_val;
+            stall = 0;
+            depends = 1;
+        end else if (mem_dest == src && mem_is_memory_load) begin 
+            data = mem_val;
+            stall = 0;
+            depends = 1;
+        end else if (wb_dest == src && (wb_is_arithmetic_op || wb_is_memory_load || wb_is_link_op)) begin
+            data = wb_val;
+            stall = 0;
+            depends = 1;
         end
     end
 endmodule

@@ -25,6 +25,8 @@ module Execute(
     assign ex_rf_dest = id_rf_dest;
     assign ex_opcode = id_opcode;
     
+    wire alu_zero;
+
     ALU alu (
             .ALUopcode (alu_op), 
             .op1 (alu_src1),
@@ -34,10 +36,12 @@ module Execute(
 
     // MODULE: Branch
     wire is_branch;
+    /* verilator lint_off PINMISSING */
     BranchOp branchOp(
-        .opcode (opcode), 
+        .opcode (id_opcode), 
         .branch_op (is_branch)
     );
+    /* verilator lint_on PINMISSING */
 
     wire take_branch = is_branch && (alu_zero ^ alu_branch_mask);
     assign ex_pc = take_branch ? branch_pc : next_pc;

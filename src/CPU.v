@@ -47,6 +47,7 @@ module CPU(
             stage_if_inst <= out_if_inst;
             stage_if_pc <= out_if_pc;
             stage_if_branch_taken <= 0; // branch prediction: always not taken
+            pc <= out_if_next_pc;
         end
     end
 
@@ -99,18 +100,43 @@ module CPU(
     wire [`REG] out_ex_rf_dest;
     wire [`WORD] out_ex_mem_data;
 
+    // --- Memory STAGE REGS ---
+    reg [`WORD] stage_mem_pc;
+    reg [`WORD] stage_mem_out;
+    reg [`WORD] stage_mem_alu_out;
+    reg [`OP] stage_mem_opcode;
+    reg [`REG] stage_mem_rf_dest;
+
+    // --- Memory STAGE INTERMEDIATES ---
+    wire [`WORD] out_mem_pc;
+    wire [`WORD] out_mem_out;
+    wire [`WORD] out_mem_alu_out;
+    wire [`OP] out_mem_opcode;
+    wire [`REG] out_mem_rf_dest;
+    wire [`WORD] dmem_addr;
+    wire [`WORD] dmem_in;
+    wire dmem_write;
+    wire dmem_read;
+    wire [2:0] dmem_mode;
+    wire [`WORD] dmem_out;
+
+    // --- WriteBack STAGE INTERMEDIATES ---
+    wire [`REG] rf_dest;
+    wire [`WORD] rf_data;
+    wire rf_write;
+
     // Forwarding
     Forward forward1(
         .ex_opcode (out_ex_opcode),
         .ex_dest (out_ex_rf_dest),
         .ex_val (out_ex_alu_out),
-        .mem_opcode (mem_opcode),
-        .mem_dest (mem_dest),
-        .mem_alu_val (mem_alu_val),
-        .mem_val (mem_val),
-        .wb_opcode (wb_opcode),
-        .wb_dest (wb_dest),
-        .wb_val (wb_val),
+        .mem_opcode (out_mem_opcode),
+        .mem_dest (out_mem_rf_dest),
+        .mem_alu_val (out_mem_alu_out),
+        .mem_val (out_mem_out),
+        .wb_opcode (stage_mem_opcode),
+        .wb_dest (stage_mem_rf_dest),
+        .wb_val (rf_data),
         .src (out_id_forward_op1),
         .data (forward_result_1),
         .depends (forward_depends_1),
@@ -121,22 +147,18 @@ module CPU(
         .ex_opcode (out_ex_opcode),
         .ex_dest (out_ex_rf_dest),
         .ex_val (out_ex_alu_out),
-        .mem_opcode (mem_opcode),
-        .mem_dest (mem_dest),
-        .mem_alu_val (mem_alu_val),
-        .mem_val (mem_val),
-        .wb_opcode (wb_opcode),
-        .wb_dest (wb_dest),
-        .wb_val (wb_val),
+        .mem_opcode (out_mem_opcode),
+        .mem_dest (out_mem_rf_dest),
+        .mem_alu_val (out_mem_alu_out),
+        .mem_val (out_mem_out),
+        .wb_opcode (stage_mem_opcode),
+        .wb_dest (stage_mem_rf_dest),
+        .wb_val (rf_data),
         .src (out_id_forward_op2),
         .data (forward_result_2),
         .depends (forward_depends_2),
         .stall (forward_stalls_2)
     );
-
-    wire [`REG] rf_dest;
-    wire [`WORD] rf_data;
-    wire rf_write;
 
     RegisterFile rf(
         .clk (clk),
@@ -217,6 +239,7 @@ module CPU(
 
     // --- STAGE ---
     //   Execute
+
     // --- STAGE REGS ---
     reg [`WORD] stage_ex_alu_out;
     reg [`OP] stage_ex_opcode;
@@ -225,7 +248,7 @@ module CPU(
     reg [`WORD] stage_ex_mem_data;
 
     Execute execute(
-        .alu_op (stage_id_opcode),
+        .alu_op (stage_id_alu_op),
         .alu_src1 (stage_id_alu_src1),
         .alu_src2 (stage_id_alu_src2),
         .id_opcode (stage_id_opcode),
@@ -255,13 +278,39 @@ module CPU(
         stage_ex_mem_data <= out_ex_mem_data;
     end
 
+    // --- STAGE ---
+    //    Memory
+
+    Memory memory(
+        .ex_alu_out (stage_ex_alu_out),
+        .ex_opcode (stage_ex_opcode),
+        .ex_pc (stage_ex_pc),
+        .ex_rf_dest (stage_ex_rf_dest),
+        .ex_mem_data (stage_ex_mem_data),
+        .mem_pc (out_mem_pc),
+        .mem_out (out_mem_out),
+        .mem_alu_out (out_mem_alu_out),
+        .mem_opcode (out_mem_opcode),
+        .mem_rf_dest (out_mem_rf_dest),
+        // MODULE: Data Memory
+        .dmem_out (dmem_out),
+        .dmem_addr (dmem_addr),
+        .dmem_in (dmem_in),
+        .dmem_write (dmem_write),
+        .dmem_read (dmem_read),
+        .dmem_mode (dmem_mode)
+    );
+    
+    // --- CLOCK ---
+    always @ (negedge clk) begin
+        stage_mem_pc <= out_mem_pc;
+        stage_mem_out <= out_mem_out;
+        stage_mem_alu_out <= out_mem_alu_out;
+        stage_mem_opcode <= out_mem_opcode;
+        stage_mem_rf_dest <= out_mem_rf_dest;
+    end  
+
     // Data Memory
-    wire [`WORD] dmem_addr;
-    wire [`WORD] dmem_in;
-    wire dmem_write;
-    wire dmem_read;
-    wire [2:0] dmem_mode;
-    wire [`WORD] dmem_out;
 
     DataMemory dmem(
         .clk (clk),
@@ -274,17 +323,17 @@ module CPU(
         .readData (dmem_out)
     );
 
-    // STAGE: Memory
-    assign dmem_addr = alu_out;
-    assign dmem_in = rf_out2;
-    assign dmem_write = is_memory_store;
-    // MISSING: mem_mode
-    assign dmem_read = is_memory_load;
-
     // STAGE: Write Back
-    assign rf_write = !is_branch && !dmem_write && opcode != 2;
-    assign rf_data = is_memory_load ? dmem_out : (
-        opcode == 3 ? pc + 4 : alu_out);
+    WriteBack writeback(
+        .pc (stage_mem_pc),
+        .mem_out (stage_mem_out),
+        .mem_rf_dest (stage_mem_rf_dest),
+        .alu_out (stage_mem_alu_out),
+        .opcode (stage_mem_opcode),
+        .rf_dest (rf_dest),
+        .rf_write (rf_write),
+        .rf_data (rf_data)
+    );
     
     always @ (negedge reset) begin
         pc <= 0;
@@ -308,5 +357,10 @@ module CPU(
         stage_ex_pc <= 0;
         stage_ex_rf_dest <= 0;
         stage_ex_mem_data <= 0;
+        stage_mem_pc <= 0;
+        stage_mem_out <= 0;
+        stage_mem_alu_out <= 0;
+        stage_mem_opcode <= 0;
+        stage_mem_rf_dest <= 0;
     end
 endmodule

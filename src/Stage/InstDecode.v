@@ -94,9 +94,11 @@ module InstDecode(
     
     // MODULE: Memory
     wire [`OP] mapped_op;
+    /* verilator lint_off PINMISSING */
     ALUOp aluOp(
         .opcode (opcode), 
         .ALUopcode (mapped_op));
+    /* verilator lint_on PINMISSING */
     wire is_memory_load;
     wire is_memory_store;
     wire [2:0] memory_mode;

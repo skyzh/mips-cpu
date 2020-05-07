@@ -3,7 +3,8 @@
 module ALUOp_tb;
     reg [5:0] opcode;
     wire [5:0] aluOpcode;
-    ALUOp aluOp(opcode, aluOpcode);
+    wire isArithmetic;
+    ALUOp aluOp(opcode, aluOpcode, isArithmetic);
 
     initial begin
         $dumpfile("result.vcd");
