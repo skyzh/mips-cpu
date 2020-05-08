@@ -39,7 +39,7 @@ module InstDecode(
     wire [`REG] rd = inst[15:11];
     wire [`REG] shamt = inst[10:6];
     wire [`OP] funct = inst[`OP];
-    wire [1`OP] imm = inst[1`OP];
+    wire [15:0] imm = inst[15:0];
     wire [`WORD] imm_sign_ext;
     wire [`WORD] imm_zero_ext;
     wire [`WORD] shamt_zero_ext = {{27'b0}, shamt};
@@ -49,7 +49,7 @@ module InstDecode(
     IsShift isShift(.funct (funct), .shift (is_shift));
     wire is_type_R = (opcode == 0);
     wire use_shamt = is_shift && is_type_R;
-    wire [`WORD] jump_target = {4'b00, inst[2`OP], 2'b00} | (pc & 32'hf0000000);
+    wire [`WORD] jump_target = {4'b00, inst[25:0], 2'b00} | (pc & 32'hf0000000);
     wire is_branch;
     wire is_memory;
 
