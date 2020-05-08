@@ -4,7 +4,7 @@ A MIPS CPU in Verilog.
 
 Making a MIPS CPU is a non-trivial task. But with the help of mips-simulator,
 my previous project on describing circuit logic in functional programming language,
-this project is done by directly translating Haskell into Verilog.
+this project can be done easily by directly translating Haskell into Verilog.
 
 
 All CPU and CPU simulators I've made are listed below.
@@ -18,7 +18,7 @@ All CPU and CPU simulators I've made are listed below.
 
 
 Variable naming and wire naming are nearly identical in Haskell version and Verilog version.
-Here I compare some code snippet between Verilog and Haskell.
+Here I compare some code snippets between Verilog and Haskell.
 
 ## Circuit Logic in Haskell and Verilog
 
