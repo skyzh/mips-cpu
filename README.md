@@ -178,3 +178,8 @@ All signals in stage registers and in stage modules are exactly the same, except
 * In Verilog, forward module logic is located in CPU.
 * In Verilog, memory is located, and operates in CPU. Memory stage sends signals out of the module.
 * In Verilog, write back is a standalone stage.
+
+## Project Report
+
+[Pipelined Processor (Chinese)](https://github.com/skyzh/mips-cpu/files/4628149/pipelined-processor.pdf)
+[Single-Cycle Processor (Chinese)](https://github.com/skyzh/mips-cpu/files/4628151/single-cycle-processor.pdf)
