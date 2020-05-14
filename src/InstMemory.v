@@ -11,7 +11,7 @@ module InstMemory(
     // parameter mem_file = "mips_hex/4-branch.mem";
     // parameter mem_file = "mips_hex/5-simple-mem.mem";
     // parameter mem_file = "mips_hex/6-mem.mem";
-    parameter mem_file = "mips_hex/7-jump.mem";
+    parameter mem_file = "mips_hex/load-use.mem";
     // parameter mem_file = "mips_hex/2-basic-arithmetic.mem";
 
     reg [31:0] memFile [0:mem_size];

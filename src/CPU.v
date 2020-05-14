@@ -47,7 +47,7 @@ module CPU(
             stage_if_inst <= out_if_inst;
             stage_if_pc <= out_if_pc;
             stage_if_branch_taken <= 0; // branch prediction: always not taken
-            pc <= out_if_next_pc;
+            pc <= if_next_pc;
         end
     end
 
