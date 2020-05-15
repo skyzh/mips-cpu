@@ -5,7 +5,7 @@ SRCS	  = src/CPU.v src/Module/SignExt.v src/Module/ZeroExt.v src/Module/ALUOp.v 
 			src/Module/MemoryOp.v src/Module/BranchOp.v \
 			src/Module/BranchOut.v src/Module/Forward.v \
 			src/Stage/InstFetch.v src/Stage/InstDecode.v src/Stage/Execute.v \
-			src/Stage/Memory.v src/Stage/WriteBack.v
+			src/Stage/Memory.v src/Stage/WriteBack.v src/Cache.v
 RESULT    = result
 V_FLAG    = -g2005-sv
 

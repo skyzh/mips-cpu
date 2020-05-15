@@ -35,12 +35,22 @@ module CPU(
     wire [`WORD] if_inst;
     wire if_inst_ready;
 
-    InstMemory imem(
+    wire [`WORD] imem_addr;
+    wire [`WORD] imem_data;
+
+    Cache cache(
         .clk (clk),
-        .reset (reset),
         .address (if_addr),
-        .readData (if_inst),
-        .ready (if_inst_ready)
+        .reset (reset),
+        .data (if_inst),
+        .ready (if_inst_ready),
+        // MODULE: Inst Memory
+        .inst_data (imem_data),
+        .inst_addr (imem_addr));
+
+    InstMemory imem(
+        .address (imem_addr),
+        .data (imem_data)
     );
 
     InstFetch instFetch(

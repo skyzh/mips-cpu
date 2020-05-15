@@ -18,7 +18,7 @@ module CPU_tb;
         clk = 0;
         #30;
         reset = 0;
-        #2000;
+        #200000;
         reset = 1;
         for (i = 0; i < 32; i = i + 1) begin
             $display("x%-2d %x %d", i, cpu.rf.regs[i], cpu.rf.regs[i]);
