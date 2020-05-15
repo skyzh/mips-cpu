@@ -31,11 +31,26 @@ module CPU(
     wire [`WORD] out_if_inst;
     wire [`WORD] out_if_pc;
 
+    wire [`WORD] if_addr;
+    wire [`WORD] if_inst;
+    wire if_inst_ready;
+
+    InstMemory imem(
+        .clk (clk),
+        .reset (reset),
+        .address (if_addr),
+        .readData (if_inst),
+        .ready (if_inst_ready)
+    );
+
     InstFetch instFetch(
         .if_pc (if_pc),
         .inst (out_if_inst),
         .pc (out_if_pc),
-        .next_pc (out_if_next_pc)
+        .next_pc (out_if_next_pc),
+        .inst_pc (if_addr),
+        .inst_ready(if_inst_ready),
+        .if_inst (if_inst)
     );
 
     wire out_id_stall;

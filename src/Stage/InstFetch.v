@@ -4,13 +4,14 @@ module InstFetch(
     input [`WORD] if_pc,
     output [`WORD] inst,
     output [`WORD] pc,
-    output [`WORD] next_pc
+    output [`WORD] next_pc,
+    output [`WORD] inst_pc,
+    input inst_ready,
+    input [`WORD] if_inst
 );
     wire [`WORD] imem_addr = if_pc;
-    InstMemory imem(
-        .address (imem_addr),
-        .readData (inst)
-    );
+    assign inst_pc = if_pc;
+    assign inst = inst_ready ? if_inst : 0;
     assign pc = if_pc;
-    assign next_pc = pc + 4;
+    assign next_pc = inst_ready ? pc + 4 : pc;
 endmodule
