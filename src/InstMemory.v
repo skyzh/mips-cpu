@@ -5,14 +5,14 @@ module InstMemory(
     output [31:0] data);
 
     parameter mem_size = 65536;
-    // parameter mem_file = "C:/Archlabs/mips_cpu/mips_hex/2-basic-arithmetic.dat";
-    // parameter mem_file = "mips_hex/2-basic-arithmetic.mem";
-    // parameter mem_file = "mips_hex/3-basic-compare.mem";
-    // parameter mem_file = "mips_hex/4-branch.mem";
-    // parameter mem_file = "mips_hex/5-simple-mem.mem";
-    parameter mem_file = "mips_hex/6-mem.mem";
-    // parameter mem_file = "mips_hex/load-use.mem";
-    // parameter mem_file = "mips_hex/2-basic-arithmetic.mem";
+    // parameter mem_file = "2-basic-arithmetic.mem";
+    // parameter mem_file = "3-basic-compare.mem";
+    // parameter mem_file = "4-branch.mem";
+    // parameter mem_file = "5-simple-mem.mem";
+    parameter mem_file = "6-mem.mem";
+    // parameter mem_file = "load-use.mem";
+    // parameter mem_file = "control-hazard.mem";
+    // parameter mem_file = "data-hazard.mem.mem";
 
     reg [31:0] memFile [0:mem_size];
 
